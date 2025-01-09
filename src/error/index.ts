@@ -1,60 +1,118 @@
-/** @format */
-import { red, bgRed, getVersion } from '../utils/common';
-import { getConfig } from '../utils/handler-set-config';
-import core from '../utils/core';
-const { colors, report, getMAC } = core;
-export { CommandError } from './command-error';
-export { ConfigDeleteError } from './config-delete-error';
-export { ConfigError } from './config-error';
-export { ConfigGetError } from './config-get-error';
-export { InitError } from './init-error';
-export { ServerlessError } from './serverless-error';
-export { HumanError } from './human-error';
-export { HumanWarning } from './human-warning';
+import { DevsError, getRootHome, getUserAgent, isDebugMode } from '@serverless-devs/utils';
+import logger from '@/logger';
+import chalk from 'chalk';
+import path from 'path';
+import fs from 'fs-extra';
+import { formatError } from '@/utils';
+import { parseArgv } from '@serverless-devs/utils';
+import { IEngineError } from '@serverless-devs/engine';
+import { get, isArray } from 'lodash';
+import execDaemon from '@/exec-daemon';
+export { default as HumanError } from './human-error';
+import * as utils from '@serverless-devs/utils';
 
-function getPid() {
-  try {
-    return getMAC().replace(/:/g, '');
-  } catch (error) {
-    return 'unknown';
-  }
-}
+const pkg = require('../../package.json');
 
-function underline(prefix: string, link: string) {
-  return `${colors.gray(prefix)}${colors.gray.underline(link)}`;
-}
-interface IConfigs {
-  error: Error;
-  prefix?: string;
-}
-export class HandleError {
-  private traceId: string;
-  constructor(configs: IConfigs) {
-    const { error, prefix = 'Message:' } = configs;
-    this.traceId = `${getPid()}${Date.now()}`;
-    console.log(red(`✖ ${prefix}\n`));
-    const analysis = getConfig('analysis');
-    if (analysis !== 'disable') {
-      console.log(colors.gray(`TraceId:     ${this.traceId}`));
+const handleError = async (error: IEngineError | IEngineError[], params: Record<string, any> = {}) => {
+  logger.unsilent();
+  const { silent } = parseArgv(process.argv.slice(2));
+  const errorFile = path.join(getRootHome(), 'logs', process.env.serverless_devs_traceid, 'error.json');
+  fs.ensureFileSync(errorFile);
+  fs.writeJSONSync(errorFile, [], { spaces: 2 });
+  let exitCode = 1;
+  if (isArray(error)) {
+    for (const e of error) {
+      doOneError(e, params);
+      const code = get(e, 'exitCode');
+      if (code) {
+        exitCode = code;
+      }
     }
-    console.log(colors.gray(`Environment: ${getVersion()}`));
-    console.log(underline('Documents:   ', 'https://www.serverless-devs.com'));
-    console.log(underline('Discussions: ', 'https://github.com/Serverless-Devs/Serverless-Devs/discussions'));
-    console.log(underline('Issues:      ', 'https://github.com/Serverless-Devs/Serverless-Devs/issues\n'));
-    console.log(`${bgRed('ERROR:')}\n${error}\n`);
-    if (analysis !== 'disable') {
-      console.log(
-        colors.gray(`Please copy traceId: ${this.traceId} and join Dingding group: 33947367 for consultation.`),
-      );
+  } else {
+    doOneError(error, params);
+    const code = get(error, 'exitCode');
+    if (code) {
+      exitCode = code;
     }
-    console.log(colors.gray("You can run 's clean --cache' to prune Serverless devs."));
-    console.log(colors.gray("And run again with the '--debug' option or 's -h' to get more logs.\n"));
   }
-  async report(error: Error) {
-    report({
-      type: 'jsError',
-      content: `${error.message}||${error.stack}`,
-      traceId: this.traceId,
-    });
+  if (utils.getGlobalConfig('log') !== 'disable') {
+    logger.write(' ');
+    logger.write(chalk.gray(`A complete log of this run can be found in: ${chalk.underline(path.join(utils.getRootHome(), 'logs', process.env.serverless_devs_traceid))}`));
   }
-}
+  // 空出一行间隙
+  logger.write(' ');
+  logger.write(
+    chalk.gray(
+      formatError([
+        {
+          key: 'Env:',
+          value: `${pkg.name}: ${pkg.version}, ${process.platform}-${process.arch} node-${process.version}`,
+        },
+        { key: 'Logs:', value: chalk.underline(path.join(getRootHome(), 'logs', process.env.serverless_devs_traceid)) },
+        { key: 'Feedback:', value: chalk.cyan.underline('https://github.com/Serverless-Devs/Serverless-Devs/issues') },
+      ]),
+    ),
+  );
+  if (silent) {
+    logger.silent();
+  }
+  process.exitCode = exitCode;
+};
+
+const doOneError = (error: IEngineError, params: Record<string, any> = {}) => {
+  execDaemon('report.js', { argv: process.argv.slice(2), userAgent: getUserAgent(), ...params, type: get(error, 'trackerType'), message: error.message });
+  writeError(error);
+  // 空出一行间隙
+  logger.write(' ');
+  const devsError = error as DevsError;
+  if (devsError.CODE === DevsError.CODE) {
+    const arr = devsError.prefix ? [`${chalk.red('✖')} ${devsError.prefix}`, '===================='] : [];
+    arr.push(chalk.red('Error Message:'), chalk.red(isDebugMode() ? devsError.stack : devsError.message));
+    if (devsError.tips) {
+      arr.push('\n🍼 Tips', '====================', chalk.yellow(`${devsError.tips}`));
+    }
+    logger.write(arr.join('\n'));
+    showStack(devsError.stack);
+    return;
+  }
+  // 其它错误
+  const e = error as Error;
+  const arr = [chalk.red('Error Message:'), chalk.red(isDebugMode() ? e.stack : e.message)];
+  logger.write(arr.join('\n'));
+  showStack(e.stack);
+};
+
+const writeError = (error: IEngineError) => {
+  const getData = (error: IEngineError) => {
+    const data = get(error, 'data');
+    if (data) {
+      return data;
+    }
+    const e = error as DevsError;
+    if (e.CODE === DevsError.CODE) {
+      return {
+        prefix: e.prefix,
+        message: e.message,
+        exitCode: e.exitCode,
+        tips: e.tips,
+      };
+    }
+    return {
+      message: e.message,
+    };
+  };
+
+  const errorFile = path.join(getRootHome(), 'logs', process.env.serverless_devs_traceid, 'error.json');
+  const errorInfo = fs.readJSONSync(errorFile);
+  errorInfo.push(getData(error));
+  fs.writeJSONSync(errorFile, errorInfo, { spaces: 2 });
+};
+
+const showStack = (msg: string) => {
+  if (isDebugMode()) {
+    return;
+  }
+  logger.debug(msg);
+};
+
+export default handleError;

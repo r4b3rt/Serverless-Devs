@@ -219,6 +219,6 @@ jdt.ls-java-projec
 *slow-spec.ts
 download/
 lib/
-package-lock.json
-.package-lock.json
-release
+releases
+.s
+__tests__/_temp/

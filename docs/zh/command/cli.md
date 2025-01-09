@@ -1,3 +1,9 @@
+---
+title: Cli 命令
+description: 'Cli 命令'
+position: 4
+category: '命令'
+---
 # Cli 命令
 
 `cli`命令是去Yaml化的命令行模式，即可以通过命令行直接使用 Serverless Devs 的组件，而不需要依赖Yaml文件。
@@ -15,27 +21,25 @@
 
 ```shell script
 $ s cli -h
-Usage: s cli [component] [method] [options]
+Usage: s cli [options]
 
 Directly use serverless devs to use components, develop and manage applications without yaml configuration.
+  
+  Example:
+    $ s cli fc3 info --region cn-hangzhou --function-name  test -a myAccess
+    $ s cli fc3 invoke --region cn-hangzhou --function-name  test -e "{"key" : "val"}" -a myAccess
     
-    Example:
-        $ s cli fc-api listServices
-        $ s cli fc-api listFunctions --service-name my-service
-        $ s cli fc-api deploy -p "{/"function/": /"function-name/"}"
-    
-📖 Document: https://github.com/Serverless-Devs/Serverless-Devs/tree/master/docs/zh/command/cli.md
+📖  Document: https://serverless.help/t/s/cli
 
 Options:
-  -a, --access [aliasName]  Specify the access alias name
-  -p, --props [jsonString]  The json string of props
-  -h, --help                Display help for command
+  -p, --props <jsonString>        The json string of props
+  -h, --help                      Display help for command
 ```
 
 使用方法主要是：
 
 ```shell script
-s cli [组件名称，例如fc，fc-api等] [组件的方法] -p/--props [该方法对应的Yaml属性（JSON字符串）] -a/--access [指定密钥信息] [其他设定]
+s cli [组件名称，例如fc，fc api等] [组件的方法] -p/--props [该方法对应的Yaml属性（JSON字符串）] -a/--access [指定密钥信息] [其他设定]
 ```
 
 
@@ -48,10 +52,10 @@ s cli [组件名称，例如fc，fc-api等] [组件的方法] -p/--props [该方
 例如，某Serverless Devs应用可以通过以下`s.yaml`描述：
 
 ```yaml
-edition: 1.0.0
+edition: 3.0.0
 access: "myaccess"
 
-services:
+resources:
   website-starter:
     component: devsapp/website
     props:
@@ -75,18 +79,34 @@ s cli devsapp/website deploy -p "{\"bucket\":\"testbucket\",\"src\":{\"codeUri\"
 
 ### 特定组件的支持
 
-在 Serverless Devs 目前已经存在的组件中，已经有一些比较优秀且针对 Cli 模式设计的组件，例如`fc-api`组件，就是一款命令行模式优先的组件，通过该组件，可以快速的使用阿里云函数计算的一些接口，进行操作，例如：
+在 Serverless Devs 目前已经存在的组件中，已经有一些比较优秀且针对 Cli 模式设计的组件，例如`fc3`组件，就是一款命令行模式优先的组件，通过该组件，可以快速的使用阿里云函数计算的一些接口，进行操作，例如：
 
-- 查看阿里云函数计算的某个地区下某个服务下的函数列表：
-    ```shell script
-    s cli fc-api listFunctions --service-name my-service --region cn-beijing -a myaccess
-    ```
-- 通过纯命令行形式，对函数进行代码更新：
-    ```shell script
-    s cli fc-api updateFunction --region cn-hangzhou --serviceName fc-deploy-service --functionName http-trigger-function --code '{"zipFile":"./"}'
+- 查看阿里云函数计算的某个地区下某个函数信息：
+
+    ```bash
+    s cli fc3 info --region cn-hangzhou --function-name  test -a myAccess
     ```
 
-除此之外，很多组件可以即对 Yaml 模式有比较好的支持，也会在某些情况下对 纯命令行模式，进行额外优化设计，例如 `fc` 组件的线上线下资源同步操作：
-```shell script
-s cli fc sync --region cn-shanghai --service-name myService --type config
+- 调用阿里云函数计算的某个地区下某个函数：
+
+    ```bash
+    s cli fc3 invoke --region cn-hangzhou --function-name  test -e "{\"key\" : \"val\"}" -a myAccess
+    ```
+
+除此之外，很多组件既可以对 Yaml 模式有比较好的支持，也会在某些情况下对 纯命令行模式，进行额外优化设计，例如 `fc3` 组件的线上线下资源同步操作：
+
+```bash
+$ s cli fc3 sync -h
+Usage: s cli fc3 sync [options]
+
+Synchronize online resources to offline resources.
+
+Examples with Yaml:
+  $ s sync
+  $ s sync --target-dir ./test --qualifier testAlias
+
+Examples with CLI:
+  $ s cli fc3 sync --region cn-hangzhou --function-name test -a default
+  $ s cli fc3 sync --region cn-hangzhou --function-name s1\$f1 -a default
+...
 ```

@@ -1,31 +1,14 @@
-import core from '../utils/core';
-import { bgRed } from '../utils/common';
+import { bgRed } from '@/constant';
+import colors from 'chalk';
+import logger from '@/logger';
 
-const { colors } = core;
-
-interface IConfigs {
-  errorMessage: string;
-  tips?: string;
-}
-
-interface IReport {
-  error: Error;
-}
-export class HumanError {
-  private errorMessage: string;
-  constructor(configs: IConfigs) {
-    const { errorMessage, tips } = configs;
-    this.errorMessage = errorMessage;
-    console.log(`\n${bgRed('ERROR:')}`);
-    console.log(`TypeError: ${errorMessage}\n`);
-    console.log(`${colors.gray(tips)}\n`);
-  }
-
-  async report(configs: IReport) {
-    const { error } = configs;
-    await core.report({
-      type: 'jsError',
-      content: `${this.errorMessage}||${error.stack}`,
-    });
+class HumanError extends Error {
+  constructor(message: string, tips?: string) {
+    super(message);
+    logger.write(`\n${bgRed('ERROR:')}`);
+    logger.write(`\n${message}\n`);
+    tips && logger.write(`${colors.gray(tips)}\n`);
   }
 }
+
+export default HumanError;

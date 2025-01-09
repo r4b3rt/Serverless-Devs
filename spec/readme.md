@@ -1,5 +1,10 @@
 # Serverless Devs Model(SDM)
 
+<p align="center">
+  <span><b><a href="./readme.md">中文</a> ｜ <a href="./readme_en.md">English</a></b></span><br>
+</p>
+
+
 Serverless Devs Model(SDM，下文简称SDM)的官方文档，主要用于介绍 SDM 的模型详情与相关规范。
 
 Serverless Devs Model(SDM) 是一种与厂商 FaaS 平台无关的 Serverless 架构工具链模型，用于定义通用的 Serverless 架构工具使用标准，让开发者更专注于业务逻辑，提升 Serverless 应用开发、部署、运维效率，通过该模型，开发者可以通过一种更灵活、更通用的方法使用不同云厂商以及开源的 Serverless 产品，进而更高效、更简洁、更便利的实现 Serverless 应用管理。
@@ -34,7 +39,8 @@ Serverless Devs Model(SDM) 是一种与厂商 FaaS 平台无关的 Serverless �
 
 模型本身由 Serverless Devs 项目驱动，并作为一组版本话 API 文档进行维护，如下所示：
 
-- [v0.0.1 (Serverless Devs v2.x)](zh/0.0.1/readme.md)
+- [v0.0.2 (Serverless Devs v2.1.x)](zh/0.0.2/readme.md)
+- [v0.0.1 (Serverless Devs v2.0.x)](zh/0.0.1/readme.md)
 
 ## 社区
 
@@ -54,6 +60,6 @@ Serverless Devs Model(SDM) 是一种与厂商 FaaS 平台无关的 Serverless �
 
 ## 协议
 
-Serverless Devs 是一个遵循 [MIT](../LICENSE) 协议的开源项目。
+Serverless Devs 是一个遵循 [Apache 2.0](../LICENSE) 协议的开源项目。
 
-Serverless Devs 使用的 node_modules 以及其他第三方的依赖库都可能有其遵循的协议，我们推荐你阅读并了解这些协议，因为其中的条款可能和 MIT 协议中的不完全相同。
+Serverless Devs 使用的 node_modules 以及其他第三方的依赖库都可能有其遵循的协议，我们推荐你阅读并了解这些协议，因为其中的条款可能和 Apache 2.0 协议中的不完全相同。

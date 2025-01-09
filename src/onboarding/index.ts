@@ -1,42 +1,30 @@
-import { InitManager } from '../init/init-manager';
-import { i18n } from '../utils';
-import { emoji, red } from '../utils/common';
-import core from '../utils/core';
-const { colors, inquirer, fse: fs } = core;
+import Manger from '@/command/init/manager';
+import { red } from '@/constant';
+import inquirer from 'inquirer';
+import { getYamlPath } from '@serverless-devs/utils';
+import logger from '@/logger';
+import chalk from 'chalk';
 
 async function onboarding() {
-  const { templateFile } = process.env;
-  if (fs.existsSync(templateFile)) {
-    return await projectWithDevs();
+  if (getYamlPath('s.yaml')) {
+    const arr = [
+      red("A Serverless-Devs project is detected in the current directory, please deploy via 's deploy' or get more information via 's -h'"),
+      `\n${red('Documents: ')}${red.underline('https://www.serverless-devs.com')}`,
+      `${red('Discussions: ')}${red.underline('https://github.com/Serverless-Devs/Serverless-Devs/discussions')}`,
+      `${red('Issues: ')}${red.underline('https://github.com/Serverless-Devs/Serverless-Devs/issues')}`,
+    ];
+    return logger.write(arr.join('\n'));
   }
-  await projectWithNoDevs();
-}
-
-async function projectWithDevs() {
-  console.log(red(`${i18n('tip_for_a_serverless_project')} `));
-
-  console.log(`\n${emoji('📘')} ${red('Documents: ')}${red.underline('https://www.serverless-devs.com')}`);
-  console.log(
-    `${emoji('🙌')} ${red('Discussions: ')}${red.underline(
-      'https://github.com/Serverless-Devs/Serverless-Devs/discussions',
-    )}`,
-  );
-  console.log(
-    `${emoji('❓')} ${red('Issues: ')}${red.underline('https://github.com/Serverless-Devs/Serverless-Devs/issues')}`,
-  );
-}
-
-async function projectWithNoDevs() {
   const answer = await inquirer.prompt([
     {
       type: 'confirm',
       default: 'Y',
       name: 'name',
-      message: colors.yellow(i18n('create_a_new_project')),
+      message: chalk.yellow('No Serverless-Devs project is currently detected. Do you want to create a new project?'),
     },
   ]);
   if (answer.name) {
-    const initManager = new InitManager();
+    const initManager = new Manger();
     await initManager.init();
   }
 }

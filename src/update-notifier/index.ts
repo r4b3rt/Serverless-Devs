@@ -1,13 +1,14 @@
 import path from 'path';
-import { execDaemon } from '../execDaemon';
+import execDaemon from '@/exec-daemon';
 import latestVersion from 'latest-version';
 import boxen from 'boxen';
-import { UPDATE_CHECK_INTERVAL } from '../constants/static-variable';
-import core from '../utils/core';
-const { fse: fs, chalk, execa, getRootHome } = core;
+import { UPDATE_CHECK_INTERVAL } from '@/constant';
+import { getRootHome } from '@serverless-devs/utils';
+import fs from 'fs-extra';
+import chalk from 'chalk';
+import semver from 'semver';
+import semverDiff from 'semver-diff';
 const pkg = require('../../package.json');
-const semver = require('semver');
-const semverDiff = require('semver-diff');
 
 const configPath = path.join(getRootHome(), 'config');
 const updateNotifierPath = path.join(configPath, 'update-notifier.json');
@@ -19,7 +20,7 @@ function format(val) {
 class UpdateNotifier {
   constructor() {
     if (!fs.existsSync(updateNotifierPath)) {
-      fs.ensureFileSync(updateNotifierPath);
+      fs.ensureDirSync(configPath);
       fs.writeFileSync(updateNotifierPath, format({}));
     }
   }
@@ -32,36 +33,28 @@ class UpdateNotifier {
   }
   init() {
     if (this.check()) {
-      execDaemon('update.js');
+      execDaemon('update-cli.js');
     }
     return this;
   }
   async update() {
     const latest = await latestVersion(pkg.name);
     const type = semverDiff(pkg.version, latest);
-    const isInstall = ['major', 'minor'].includes(type);
     const data = {
-      output: isInstall ? false : semver.gt(latest, pkg.version),
+      output: semver.gt(latest, pkg.version),
       current: pkg.version,
       latest,
       type,
       lastUpdateCheck: Date.now(),
     };
     fs.writeFileSync(updateNotifierPath, format(data));
-    isInstall && this.install();
-  }
-  install() {
-    try {
-      execa.sync(`npm install ${pkg.name} -g`, { shell: true });
-    } catch (error) {
-      execa.sync(`yarn global add ${pkg.name}`, { shell: true });
-    }
   }
   notify() {
     if (!this.config('output')) return;
-    const defaultTemplate = `Update available ${chalk.dim(pkg.version)} ${chalk.reset('→')} ${chalk.green(
-      this.config('latest'),
-    )} \nRun ${chalk.cyan(`npm i -g ${pkg.name}`)} to update`;
+    if (pkg.version === this.config('latest')) return;
+    const defaultTemplate = `Update available ${chalk.dim(pkg.version)} ${chalk.reset('→')} ${chalk.green(this.config('latest'))} \nRun ${chalk.cyan(
+      `npm i -g ${pkg.name}`,
+    )} to update`;
 
     const message = boxen(defaultTemplate, {
       padding: 1,
@@ -77,4 +70,4 @@ class UpdateNotifier {
   }
 }
 
-export = UpdateNotifier;
+export default UpdateNotifier;
